@@ -17,6 +17,8 @@ INT32_MIN = -(1<<31)
 
 if IS_PY2:
 	def bytes(arr):
+		if type(arr) is int:
+			return "\0" * arr
 		return "".join(map(chr, arr)) # ewwww
 
 nogc = set()  # things we want to keep a reference to, to prevent gc
