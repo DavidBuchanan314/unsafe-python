@@ -1,5 +1,5 @@
 # unsafe-python
-A library to assist writing memory-unsafe code in pure python, without any imports (i.e. no ctypes etc.)
+A library to assist writing memory-unsafe code in "pure" python, without any imports (i.e. no ctypes etc.)
 
 **Note: This is a toy.** You probably shouldn't use it for anything serious (or anything at all, really).
 
