@@ -1,6 +1,14 @@
 # unsafe-python
 A library to assist writing memory-unsafe code in pure python, without any imports (i.e. no ctypes etc.)
 
+# Core features:
+
+- `addrof(obj)` - A trivial alias of the `id()` builtin.
+- `fakeobj(addr)` - Allows for crafting fake heap objects.
+- `getmem()` - Returns a bytearray view of the current process's virtual memory.
+- `setrip(addr)` - Sets the RIP register. Argument passing etc. coming soon™.
+
+A trivial example, showing how to dereference a null pointer in pure python. The future is now!
 ```python
 >>> import unsafe  # (If "no imports" is a requirement, then you can just copy-paste the code)
 >>> mem = unsafe.getmem()

