@@ -68,7 +68,7 @@ def get_aligned_tuple_and_bytes(prefix):
 
 # generate a function that effectively does LOAD_CONST(n)
 def load_n(n):
-	return eval("lambda: %s if None else %s" % (list(range(1,n)), n))
+	return eval("lambda: list(%s) if None else %s" % (",".join(map(str, range(1, n))), n))
 
 
 def replace_code_consts(codeobj, consts):
