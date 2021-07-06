@@ -1,5 +1,7 @@
 import unsafe
 
+# only tested/working on python 2.7, 3.8,  (x86_64)
+
 gadgets = unsafe.find_gadgets()
 
 binsh = unsafe.refbytes(b"/bin/sh\0")
