@@ -34,3 +34,9 @@ This project uses CPython's code object introspection APIs, along with a heap gr
 
  - Perform ROP gadget search without "cheating" by reading `/proc/self/maps`.
 i.e. find a reliable way to leak libc base.
+
+# See Also:
+
+An incomplete list of known CPython memory safety issues:
+
+ - https://pwn.win/2022/05/11/python-buffered-reader.html
