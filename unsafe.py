@@ -87,8 +87,10 @@ def load_n(n):
 
 
 def replace_code_consts(codeobj, consts):
-	# in python3.8+ this can be implemented as:
-	# return codeobj.replace(co_consts=consts)
+	# py3.8+
+	if hasattr(codeobj, "replace"):
+		return codeobj.replace(co_consts=consts)
+
 	code_args = []
 	argnames = CodeType.__doc__.split("(")[1].split("[")[0].split(",")
 	for argname in argnames:
