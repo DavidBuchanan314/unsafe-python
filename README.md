@@ -1,6 +1,8 @@
 # unsafe-python
 A library to assist writing memory-unsafe code in "pure" python, without any imports (i.e. no ctypes etc.)
 
+The main "exploit primitive" seems to have broken in py3.12, but it works in all(?) previous versions. It's probably fixable, I just need to learn about what changed in 3.12.
+
 **Note: This is a toy.** You probably shouldn't use it for anything serious (or anything at all, really).
 
 # Core features:
