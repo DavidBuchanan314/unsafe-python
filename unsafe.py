@@ -188,9 +188,9 @@ def fakeobj(addr):
 		"""
 
 		fake_bytearray = bytes(p64a(
-			1,
-			addrof(bytearray),
-			8,
+			1,   # ob_refcnt
+			addrof(bytearray),  # ob_type
+			8,   #    ob_size
 			0,   #    py2 ob_exports, py3 ob_alloc
 			8+1, #    py2 ob_alloc, py3 ob_bytes
 			addrof(reusable_tuple) + TUPLE_HEADER_LEN, # py2 ob_bytes, py3 ob_start
