@@ -24,7 +24,7 @@ if IS_PY2:
 	def bytes(arr):
 		if type(arr) is int:
 			return "\0" * arr
-		return "".join(map(chr, arr)) # ewwww
+		return str(bytearray(arr))
 
 nogc = []  # things we want to keep a reference to, to prevent gc
 
@@ -151,15 +151,52 @@ def fakeobj(addr):
 
 	global reusable_bytearray
 	if reusable_bytearray is None:
+		# py3: https://github.com/python/cpython/blob/75c551974f74f7656fbb479b278e69c8200b4603/Include/cpython/bytearrayobject.h#L5-L12
+		"""
+		typedef struct _object PyObject;
+
+		# real definition has lots of #ifdefs, but it's basically this
+		struct _object {
+			Py_ssize_t ob_refcnt;
+			PyTypeObject *ob_type;
+		}
+
+		#define PyObject_VAR_HEAD      PyVarObject ob_base;
+
+		typedef struct {
+			PyObject ob_base;
+			Py_ssize_t ob_size; /* Number of items in variable part */
+		} PyVarObject;
+
+		typedef struct {
+			PyObject_VAR_HEAD
+			Py_ssize_t ob_alloc;   /* How many bytes allocated in ob_bytes */
+			char *ob_bytes;        /* Physical backing buffer */
+			char *ob_start;        /* Logical start inside ob_bytes */
+			Py_ssize_t ob_exports; /* How many buffer exports */
+		} PyByteArrayObject;
+		"""
+		# py2: https://github.com/certik/python-2.7/blob/c360290c3c9e55fbd79d6ceacdfc7cd4f393c1eb/Include/bytearrayobject.h#L22-L28
+		"""
+		typedef struct {
+			PyObject_VAR_HEAD
+			/* XXX(nnorwitz): should ob_exports be Py_ssize_t? */
+			int ob_exports; /* how many buffer exports */
+			Py_ssize_t ob_alloc; /* How many bytes allocated */
+			char *ob_bytes;
+		} PyByteArrayObject;
+		"""
+
 		fake_bytearray = bytes(p64a(
 			1,
 			addrof(bytearray),
 			8,
-			8,
-			addrof(reusable_tuple) + TUPLE_HEADER_LEN ,
-			addrof(reusable_tuple) + TUPLE_HEADER_LEN,
-			0
+			0,   #    py2 ob_exports, py3 ob_alloc
+			8+1, #    py2 ob_alloc, py3 ob_bytes
+			addrof(reusable_tuple) + TUPLE_HEADER_LEN, # py2 ob_bytes, py3 ob_start
+			0 # py3 ob_exports
 		))
+		nogc.append(fake_bytearray)  # important!!!
 		reusable_bytearray = fakeobj_once(refbytes(fake_bytearray))
 
 	# assume 64-bit ptrs
