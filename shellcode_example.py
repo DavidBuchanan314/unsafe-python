@@ -1,3 +1,5 @@
+# Note: last tested on aarch64 py2.7, py3.8 - py3.11
+
 import unsafe
 import platform
 import mmap
