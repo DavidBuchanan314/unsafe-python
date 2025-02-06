@@ -200,9 +200,11 @@ def fakeobj(addr):
 		reusable_bytearray = fakeobj_once(refbytes(fake_bytearray))
 
 	# assume 64-bit ptrs
+	backup = reusable_bytearray[:8]
 	reusable_bytearray[:8] = p64a(addr)
-
 	res = reusable_tuple[0]
+	reusable_bytearray[:8] = backup
+
 	nogc.append(res) # unnecessary?
 	return res
 
